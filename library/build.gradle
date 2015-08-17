@@ -1,0 +1,60 @@
+import java.util.regex.Matcher
+
+apply plugin: 'com.android.library'
+
+def versionName() {
+    return '0.0.1'
+}
+
+def versionNameToCode(String version) {
+    String v = version.replaceAll(/\./, '')
+    return v.toLong()
+}
+
+String version = versionName()
+int code = versionNameToCode(version)
+
+android {
+    compileSdkVersion 22
+    buildToolsVersion '22.0.1'
+    defaultConfig {
+        //applicationId "com.qiniu.android"
+        minSdkVersion 8
+        targetSdkVersion 22
+        versionCode code
+        versionName version
+    }
+}
+
+dependencies {
+    compile 'com.nostra13.universalimageloader:universal-image-loader:1.9.4'
+    compile 'com.qiniu:happy-dns:0.2.3.2'
+    compile fileTree(include: ['*.jar'], dir: 'libs')
+}
+
+task releaseJar(type:Jar, dependsOn: 'build') {
+    //指定生成的jar名
+    baseName 'qiniu-android-sdk-' + version
+    //从哪里打包class文件
+    from('build/intermediates/classes/release/com/qiniu/android/imageloader/')
+    //打包到jar后的目录结构
+    into('com/qiniu/android/imageloader/')
+    //去掉不需要打包的目录和文件
+    exclude('test/', 'BuildConfig.class', 'R.class')
+    //去掉R$开头的文件
+    exclude{ it.name.startsWith('R$');}
+}
+
+android.libraryVariants.all { variant ->
+    def name = variant.buildType.name
+    def task = project.tasks.create "jar${name.capitalize()}", Jar
+    task.dependsOn variant.javaCompile
+    task.from variant.javaCompile.destinationDir
+    task.exclude '**/R.*',  '**/R$*.*', '**/BuildConfig.class'
+    artifacts.add('archives', task);
+}
+
+setProperty('VERSION_NAME', version)
+setProperty('VERSION_CODE', code)
+
+apply from: '../mvn_push.gradle'
